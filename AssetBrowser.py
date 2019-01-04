@@ -89,7 +89,7 @@ class AssetBrowser(QtGui.QDialog):
 		self.ui.ok_btn_char_tab.clicked.connect(self.load_file)	
 		self.ui.ok_btn_anim_tab.clicked.connect(self.get_anim_folder_item)					
 		self.ui.cancel_btn_char_tab.clicked.connect(self.print_test)	
-		self.ui.cancal_btn_anim_tab.clicked.connect(self.concatenate_anim_path)
+		self.ui.cancal_btn_anim_tab.clicked.connect(self.get_anims)
 
 		self.ui.body_type_MA_rb.toggled.connect(self.add_current_items)
 		self.ui.body_type_FA_rb.toggled.connect(self.add_current_items)
@@ -103,25 +103,36 @@ class AssetBrowser(QtGui.QDialog):
 		
 		for each in self.get_character_names():
 			self.ui.character_name_list_widget.clear()
-			self.ui.character_name_list_widget.addItem(each)			
+			self.ui.character_name_list_widget.addItem(QtGui.QListWidgetItem(each))		
 		self.ui.character_name_list_widget	.setCurrentRow(0)
-		self.ui.character_name_list_widget.itemClicked.connect(self.get_current_item)
+		self.ui.character_name_list_widget.itemClicked.connect(self.get_character_name)
 		
 		for each in self.get_anim_folder_items():			
 			self.ui.animation_folder_list_widget.addItem(each)		
 		self.ui.animation_folder_list_widget.setCurrentRow(0)
 		self.ui.animation_folder_list_widget.itemClicked.connect(self.get_anim_folder_item)
 				
-		for each in self.concatenate_anim_path():
+		for each in self.get_anims():
 			self.ui.anim_list_widget.addItem(each)
-		self.ui.animation_folder_list_widget.setCurrentRow(0)
-		self.ui.animation_folder_list_widget.itemDoubleClicked.connect(self.import_corresponding_file)
+		self.ui.anim_list_widget.setCurrentRow(0)
+		self.ui.anim_list_widget.itemDoubleClicked.connect(self.import_corresponding_file)
 	
 	def add_current_items(self):
-		self.ui.character_name_list_widget.clear()		
-		for each in self.get_character_names():
-			self.ui.character_name_list_widget.addItem(each)			
+		self.ui.character_name_list_widget.clear()
+		self.ui.animation_folder_list_widget.clear()
+		self.ui.anim_list_widget.clear()
+				
+		for char in self.get_character_names():
+			self.ui.character_name_list_widget.addItem(char)			
 		self.ui.character_name_list_widget.setCurrentRow(0)
+		
+		for folder in self.get_anim_folder_items():
+			self.ui.animation_folder_list_widget.addItem(folder)			
+		self.ui.animation_folder_list_widget.setCurrentRow(0)
+		
+		for anim in self.get_anims():
+			self.ui.anim_list_widget.addItem(anim)			
+		self.ui.anim_list_widget.setCurrentRow(0)
 		
 	def print_test(self):
 		self.get_character_names()			
@@ -139,10 +150,12 @@ class AssetBrowser(QtGui.QDialog):
 	def get_default_character_type(self):
 		self.CURRENT_CHARACTER_TYPE = self.ui.player_cb.currentText()
 		return self.CURRENT_CHARACTER_TYPE
-					
+		
+		
+	#####test to get character name and anim folder by clicking				
 	def get_current_item(self,item):
 		self.CURRENT_ITEM = item.text()
-		print 'current_item : ' + self.CURRENT_ITEM
+		
 		return self.CURRENT_ITEM
 
 	def get_MA_rb_text(self):
@@ -151,7 +164,6 @@ class AssetBrowser(QtGui.QDialog):
 		
 	def get_FA_rb_text(self):
 		self.CURRENT_BODY_TYPE = 'FemaleAdult'
-		print self.CURRENT_BODY_TYPE + ' : in get_FA_rb_text()'
 		return self.CURRENT_BODY_TYPE
 		
 	def get_CH_rb_text(self):
@@ -172,7 +184,6 @@ class AssetBrowser(QtGui.QDialog):
 		
 	def get_character_cb_type(self):
 		self.CURRENT_CHARACTER_TYPE = self.ui.player_cb.currentText()
-		print 'player_cb : ' + str(self.CURRENT_CHARACTER_TYPE)
 		return self.CURRENT_CHARACTER_TYPE
 
 	def get_rb_cb_text(self):				
@@ -198,52 +209,91 @@ class AssetBrowser(QtGui.QDialog):
 		self.CURRENT_ANIM_PATH = (ANIM_FOLDER_PATH +'{0}'+'\\'+'{1}'+'\\'+'{2}'+'\\').format(
 					self.CURRENT_BODY_TYPE,self.CURRENT_MOTION_NAME ,self.CURRENT_CHARACTER_TYPE + '_temp')					
 		self.DEFAULT = False				
-		print 'CURRENT_ANIM_PATH : ' + str(self.CURRENT_ANIM_PATH)
 		return self.CURRENT_ANIM_PATH		
-	
+		
+		
+	###########default loading info
 	def get_character_names(self):
 		self.get_rb_cb_text()
-		print 'CURRENT_ANIM_PATH : \n' +  str(self.CURRENT_ANIM_PATH) + '\n'
-		path_list = get_maya_file_name(self.CURRENT_ANIM_PATH)[0]
-		character_name_list = []
-		for path in path_list:
-			dummy_ = path.split('\\')
-			while '' in dummy_:
-				dummy_.remove('')
-			if len(dummy_) == 8:
-				character_name_list.append(QtGui.QListWidgetItem(dummy_[-1]))
-		print character_name_list
-		return character_name_list
+		print 'CURRENT_ANIM_PATH : \n' +  str(self.CURRENT_ANIM_PATH)
+		path_lists = get_maya_file_name(self.CURRENT_ANIM_PATH)
+		if len(path_lists[0]) == 0:
+			return ['no character here']
+		else:
+			path_list = path_lists[0]
+			character_name_list = []
+			for path in path_list:
+				dummy_ = path.split('\\')
+				while '' in dummy_:
+					dummy_.remove('')
+				if len(dummy_) == 8:
+					character_name_list.append(dummy_[-1])
+			return character_name_list
 
 	def get_anim_folder_items(self):
-		temp_anim_path = self.CURRENT_ANIM_PATH + self.CURRENT_ITEM
-		temp_path_list = get_maya_file_name(temp_anim_path)		
-		anim_folder_paths = temp_path_list[0][2:]
-		anim_folder_path = []
-		for each in anim_folder_paths:			
-			anim_name_folder = each.split('\\')[-1]
-			if '.' not in anim_name_folder:
-				anim_folder_path.append(anim_name_folder)
-		print 'folders : ' + str(anim_folder_path)
-		return anim_folder_path
+		self.get_rb_cb_text()
+		character_name = self.get_character_names()[0]
+		
+		self.DEFAULT = True
+		if self.DEFAULT:			
+			temp_anim_path = self.CURRENT_ANIM_PATH + character_name
+		else:
+			self.get_character_name(item)
+			temp_anim_path = self.CURRENT_ANIM_PATH + self.CURRENT_CHARACTER_NAME
+			
+		temp_path_list = get_maya_file_name(temp_anim_path)	
+		if 	len(temp_path_list[0]) == 0:
+			return ['no aniamtion folder here']
+		else:
+			anim_folder_paths = temp_path_list[0]
+			anim_folder_path = []
+			for each in anim_folder_paths:
+				if len(each.split('\\')) == 9:
+					temp_anim_folder = each.split('\\')[-1]
+					if '.' not in temp_anim_folder and len(temp_anim_folder) != 0:			
+						anim_folder_path.append(temp_anim_folder)
+			return anim_folder_path
+		
+	def	 get_anims(self):
+		self.get_rb_cb_text()	
+		full_path = self.CURRENT_ANIM_PATH + self.CURRENT_CHARACTER_NAME + '\\' + self.CURRENT_ANIM_FOLDER
+		temp_anim_files = get_maya_file_name(full_path)		
+		if len(temp_anim_files[0]) == 0:
+			return ['no aniamtion here']
+		else:
+			temp_anim_file = temp_anim_files[1][0]
+			return temp_anim_file
+			
+			
 				
 	def get_character_name(self, item):
+		self.get_rb_cb_text()
 		self.CURRENT_CHARACTER_NAME = item.text()
-		print 'CURRENT_CHARACTER_NAME : ' + str(self.CURRENT_CHARACTER_NAME)
-		return self.CURRENT_CHARACTER_NAME
+		cn_path = self.CURRENT_ANIM_PATH + self.CURRENT_CHARACTER_NAME
+		print 'cn_path : ' + str(cn_path)
+		cn_path_lists = get_maya_file_name(cn_path)
 		
-	def get_anim_folder_item(self, item):
+		if len(cn_path_lists[0]) == 0:
+			return ['no character here']
+		else:
+			path_list = cn_path_lists[0]
+			character_name_list = []
+			for path in path_list:
+				dummy_ = path.split('\\')
+				while '' in dummy_:
+					dummy_.remove('')
+				if len(dummy_) == 8:
+					character_name_list.append(dummy_[-1])
+			return character_name_list
+		
+	def get_anim_folder_item(self, item):	
 		self.CURRENT_ANIM_FOLDER = item.text()
 		print 'CURRENT_ANIM_FOLDER : ' + str(self.CURRENT_ANIM_FOLDER)
-		return self.CURRENT_ANIM_FOLDER
-	
-	def	 concatenate_anim_path(self):
-		self.get_rb_cb_text()
-		full_path = self.CURRENT_ANIM_PATH + self.CURRENT_CHARACTER_NAME + '\\' + self.CURRENT_ANIM_FOLDER
-		print 'full_path : ' + str(full_path)
-		temp_anim_files = get_maya_file_name(full_path)[1][0]
-		print 'temp_anim_files : ' + str(temp_anim_files)
-		return temp_anim_files
+		
+		
+		return self.CURRENT_ANIM_FOLDER	
+		
+		
 		
 	def filter_character(self, name):
 		'''
